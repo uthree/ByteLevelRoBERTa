@@ -51,14 +51,14 @@ class Tokenizer():
         self.pad = pad
         self.concat_kernel = concat_kernel
 
-    def tokenize(self, sentence : str, mask_prob=0.):
+    def tokenize_single(self, sentence : str, mask_prob=0.):
         l = list(sentence.encode(encoding='utf-8'))
         # random masking
         l = [ b if random.random() >= mask_prob else self.mask for b in l ]
         l = [self.bos] + l + [self.eos]
         return l
 
-    def untokenize(self, list_of_integers):
+    def untokenize_single(self, list_of_integers):
         buff = []
         for i in list_of_integers:
             if i == self.eos:
@@ -66,6 +66,21 @@ class Tokenizer():
             if not (i == self.mask or i == self.bos or i == self.pad):
                 buff.append(i)
         return bytes(buff).decode(encoding='utf-8', errors="ignore")
+
+    def tokenize_sentences(self, sentences, mask_prob=0., max_length = 256):
+        s = [ self.tokenize_sentences(a, mask_prob=mask_prob) for a in sentences ]
+        max_len = max([len(a) for a in s])
+        def _pad(sent, mlen, pad_id):
+            b = sent[:mlen]
+            while len(b) < mlen:
+                b.append(pad_id)
+            return b
+        s = [ _pad(a) for a in s ]
+        return s
+
+    def untokenize_sentences(self, mat):
+        return [ self.untokenize_single(l) for l in mat ]
+    
 
 class BERT(nn.Module):
     def __init__(self, embedding, transformer, unembedding):
